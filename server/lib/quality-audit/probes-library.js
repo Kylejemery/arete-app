@@ -558,8 +558,10 @@ const probes = [
                 : 'It has no committed file, so the nightly sync cannot load it into the corpus.'),
             evidence: [`synthesis_drafts ${d.id} (${d.mode})`],
             action:
-              'cd academy/corpus-ingestion && node export-synthesis-drafts.js, then commit the files it writes ' +
-              'with the README and open a PR.',
+              'The Export synthesis drafts workflow should have exported it within the hour: check its recent ' +
+              'runs in GitHub Actions (a failed run, or missing SUPABASE_* secrets). By hand: cd ' +
+              'academy/corpus-ingestion && node export-synthesis-drafts.js, then commit the files with the README ' +
+              'and open a PR.',
           }));
         } else if (d.status === 'exported' && daysSince(d.exported_at) > exportedDays) {
           out.push(finding({

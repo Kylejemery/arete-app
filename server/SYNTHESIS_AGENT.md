@@ -131,6 +131,19 @@ Virtues of Socrates documents took). Code: `synthesis/modes/stoic-life.js`
 `<doc_key>.v1.md` → PR → merge → the nightly sync loads it. Nothing reaches
 `rag_corpus` without a committed file.
 
+**Export runs itself.** `.github/workflows/export-synthesis-drafts.yml` runs
+the exporter hourly (and when approval dispatches it), commits the files to
+the `synthesis-export` branch, opens the PR, and only then marks the drafts
+`exported` (`--write-only`, then `--mark-exported`), which is when the
+Observatory journal shows a Stoic Life essay. Merging the PR stays a person's
+call. It needs the repository secrets `SUPABASE_URL` and
+`SUPABASE_SERVICE_ROLE_KEY`, and Actions allowed to create pull requests.
+Approving a draft on the admin page dispatches the workflow at once when the
+academy has `SYNTHESIS_EXPORT_DISPATCH_TOKEN` (a fine-grained token on this
+repo, Contents: read and write); without it, the hourly run picks the draft
+up. The audit probe `library.synthesis_unexported` reports a draft the
+workflow has not exported within three days.
+
 **When it runs.** No schedule. The admin page at
 `/admin/synthesis/stoic-life` starts a cycle
 (`POST /api/admin/synthesis/stoic-life/run` on the API server) whenever Kyle

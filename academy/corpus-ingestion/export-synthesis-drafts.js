@@ -22,6 +22,14 @@
 //   node export-synthesis-drafts.js              reconcile, then export approved drafts
 //   node export-synthesis-drafts.js --dry-run    show what would be written, touch nothing
 //   node export-synthesis-drafts.js --reconcile  only mark loaded drafts ingested
+//
+// Two-step form, used by .github/workflows/export-synthesis-drafts.yml so a
+// draft is never marked exported unless its file reached a pushed branch:
+//   node export-synthesis-drafts.js --write-only PENDING.json
+//        write the files and README, record the status updates in PENDING.json,
+//        leave every draft 'approved'
+//   node export-synthesis-drafts.js --mark-exported PENDING.json
+//        apply them, each only if the draft is still 'approved' with the same text
 
 require('dotenv').config();
 const fs = require('fs');
@@ -99,17 +107,17 @@ async function reconcile(supabase, log) {
   return n;
 }
 
-async function exportApproved(supabase, { dryRun, log, dir = SYNTHESIS_DIR, readmePath = README }) {
+async function exportApproved(supabase, { dryRun, log, dir = SYNTHESIS_DIR, readmePath = README, deferStatus = false }) {
   const { data: drafts, error } = await supabase
     .from('synthesis_drafts')
     .select('id, doc_key, version, title, markdown')
     .eq('status', 'approved')
     .order('reviewed_at', { ascending: true });
   if (error) throw new Error(`reading approved drafts: ${error.message}`);
-  if (!drafts || !drafts.length) { log('No approved drafts to export.'); return { exported: 0, errors: 0 }; }
+  if (!drafts || !drafts.length) { log('No approved drafts to export.'); return { exported: 0, errors: 0, files: [], pending: [] }; }
 
   let readme = fs.readFileSync(readmePath, 'utf8');
-  const result = { exported: 0, errors: 0, files: [] };
+  const result = { exported: 0, errors: 0, files: [], pending: [] };
   for (const d of drafts) {
     const file = `${d.doc_key}.v${d.version}.md`;
     try {
@@ -134,15 +142,17 @@ async function exportApproved(supabase, { dryRun, log, dir = SYNTHESIS_DIR, read
 
       fs.writeFileSync(target, md);
       if (!readme.includes(`\`${file}\``)) readme = addReadmeRow(readme, row);
-      const { error: uErr } = await supabase.from('synthesis_drafts').update({
+      const update = {
         status: 'exported',
         markdown: md,
-        exported_at: new Date().toISOString(),
         export_file_path: `academy/corpus-ingestion/synthesis/${file}`,
         export_sha256: doc.content_sha256,
-        updated_at: new Date().toISOString(),
-      }).eq('id', d.id);
-      if (uErr) throw new Error(`marking exported: ${uErr.message}`);
+      };
+      if (deferStatus) {
+        result.pending.push({ id: d.id, file, approved_markdown: d.markdown, update });
+      } else {
+        await applyExported(supabase, d.id, update);
+      }
       result.exported++;
       result.files.push(file);
     } catch (err) {
@@ -154,11 +164,45 @@ async function exportApproved(supabase, { dryRun, log, dir = SYNTHESIS_DIR, read
   return result;
 }
 
+async function applyExported(supabase, id, update, { onlyIfMarkdown } = {}) {
+  const now = new Date().toISOString();
+  let q = supabase.from('synthesis_drafts')
+    .update({ ...update, exported_at: now, updated_at: now })
+    .eq('id', id);
+  if (onlyIfMarkdown !== undefined) q = q.eq('status', 'approved').eq('markdown', onlyIfMarkdown);
+  const { data, error } = await q.select('id');
+  if (error) throw new Error(`marking exported: ${error.message}`);
+  return (data || []).length;
+}
+
+// Step two of the deferred form: the files are on a pushed branch, so the
+// drafts can now say so. A draft edited or re-reviewed in between is skipped.
+async function markExported(supabase, pending, log) {
+  let n = 0, skipped = 0;
+  for (const p of pending) {
+    const changed = await applyExported(supabase, p.id, p.update, { onlyIfMarkdown: p.approved_markdown });
+    if (changed) { n++; log(`  ✓ ${p.file}: marked exported`); }
+    else { skipped++; log(`  ! ${p.file}: the draft is no longer approved with the same text; left as it is`); }
+  }
+  return { marked: n, skipped };
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const dryRun = args.includes('--dry-run');
   const log = console.log;
   const supabase = getSupabase();
+  const argAfter = flag => { const i = args.indexOf(flag); return i === -1 ? null : args[i + 1]; };
+
+  const markPath = argAfter('--mark-exported');
+  if (markPath) {
+    const pending = JSON.parse(fs.readFileSync(markPath, 'utf8'));
+    log('--- mark exported ---');
+    const r = await markExported(supabase, pending, log);
+    if (r.skipped) process.exitCode = 1;
+    return;
+  }
+  const writeOnly = argAfter('--write-only');
 
   if (!dryRun) {
     log('--- reconcile ---');
@@ -168,7 +212,8 @@ async function main() {
   if (args.includes('--reconcile')) return;
 
   log('\n--- export ---');
-  const r = await exportApproved(supabase, { dryRun, log });
+  const r = await exportApproved(supabase, { dryRun, log, deferStatus: Boolean(writeOnly) });
+  if (writeOnly) fs.writeFileSync(writeOnly, JSON.stringify(r.pending, null, 2));
   if (r.files && r.files.length) {
     log(`\nWrote ${r.files.length} file(s). Commit them with the README and open a PR; the nightly sync loads them after merge.`);
   }
@@ -182,4 +227,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { withReviewedBy, statusSummary, addReadmeRow, exportApproved, reconcile };
+module.exports = { withReviewedBy, statusSummary, addReadmeRow, exportApproved, reconcile, markExported };

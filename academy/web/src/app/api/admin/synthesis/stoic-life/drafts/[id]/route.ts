@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase-admin'
-import { frontMatterIdentity, requireAdmin, startStoicLifeCycle } from '@/lib/stoic-life'
+import { dispatchSynthesisExport, frontMatterIdentity, requireAdmin, startStoicLifeCycle } from '@/lib/stoic-life'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -9,9 +9,12 @@ export const maxDuration = 30
 //   { status?: 'approved' | 'rejected', markdown?: string, review_notes?: string }
 //
 // Saving an edit sets the draft to 'edited': it needs approving again.
-// Approving makes it exportable (academy/corpus-ingestion/
-// export-synthesis-drafts.js writes it into the repo; nothing is ingested
-// until that file is merged). Rejecting sends its topic back to 'proposed', so
+// Approving makes it exportable: the Export synthesis drafts workflow
+// (.github/workflows/export-synthesis-drafts.yml) runs export-synthesis-
+// drafts.js, opens a PR with the file and marks the draft exported, which is
+// when the Observatory journal shows it. Approval asks GitHub to run it now;
+// failing that, its hourly schedule does. Nothing is ingested until the PR is
+// merged. Rejecting sends its topic back to 'proposed', so
 // Kyle decides whether it is drafted again. Approving or rejecting frees the
 // review slot, so a cycle is started for the next approved topic.
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -62,6 +65,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (error) throw new Error(error.message)
 
     let cycle = null
+    let exportRun = null
+    if (updates.status === 'approved') exportRun = await dispatchSynthesisExport()
     if (updates.status === 'approved' || updates.status === 'rejected') {
       if (updates.status === 'rejected' && draft.topic_id) {
         await admin.from('synthesis_topics').update({
@@ -72,7 +77,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
       cycle = await startStoicLifeCycle(session.token)
     }
-    return NextResponse.json({ success: true, draft: data, cycle })
+    return NextResponse.json({ success: true, draft: data, cycle, export: exportRun })
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Failed to update draft' }, { status: 500 })
   }

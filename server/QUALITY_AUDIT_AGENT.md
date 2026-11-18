@@ -66,8 +66,9 @@ claims nothing. Each finding is keyed `case:set:chunkId`.
 never exported. Approval does not publish anything:
 `academy/corpus-ingestion/export-synthesis-drafts.js` writes the file and marks
 the draft `exported`, and the Observatory journal shows a Stoic Life essay only
-after that. Nothing runs the export on its own, and five approved essays once
-sat unseen for up to six weeks. It warns for a Stoic Life draft approved more
+after that. The Export synthesis drafts workflow now runs it hourly; before it
+did, five approved essays sat unseen for up to six weeks, and this probe is how
+a stalled workflow gets noticed. It warns for a Stoic Life draft approved more
 than `synthesis_export_stale_days` ago (info for other modes, which readers do
 not see), and gives info for an exported draft still not in the corpus after
 `synthesis_ingest_stale_days`, which usually means the export PR is unmerged.
