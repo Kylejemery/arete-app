@@ -47,6 +47,9 @@ const observatory = require('./routes/observatory');
 // Read-only MCP server over rag_corpus for external agents (the Moltbook
 // agent). Token-gated; disabled until ARETE_MCP_TOKEN is set.
 const corpusMcp = require('./routes/corpus-mcp');
+// Single-key MCP server over rag_corpus for MCP clients (Claude.ai, Claude Code,
+// ChatGPT). POST /mcp, disabled until ARETE_MCP_KEY is set. See server/MCP.md.
+const mcp = require('./routes/mcp');
 const agora = require('./routes/agora');
 
 // The Enchiridion: a member's own handbook, compiled from their writing and
@@ -706,6 +709,7 @@ app.use(cors({
 app.use(express.json());
 app.use(observatory.router);
 app.use(corpusMcp.router);
+app.use(mcp.router);
 app.use(agora.router);
 app.use(enchiridion.router);
 app.use(seminar.router);
